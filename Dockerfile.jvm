@@ -1,0 +1,30 @@
+FROM maven:3.9.5-eclipse-temurin-21 AS builder
+
+WORKDIR /build
+
+COPY pom.xml .
+
+COPY . .
+RUN mvn clean package -DskipTests -Dquarkus.package.type=uber-jar
+
+FROM eclipse-temurin:21-jdk
+
+ENV PMD_VERSION=7.7.0
+ENV PMD_HOME=/opt/pmd
+
+RUN apt-get update && \
+    apt-get install -y unzip curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p "$PMD_HOME" && \
+    curl -L "https://github.com/pmd/pmd/releases/download/pmd_releases/${PMD_VERSION}/pmd-dist-${PMD_VERSION}-bin.zip" -o /tmp/pmd.zip && \
+    unzip /tmp/pmd.zip -d /opt && \
+    mv /opt/pmd-bin-${PMD_VERSION}/* "$PMD_HOME" && \
+    rm -rf /tmp/pmd.zip
+
+ENV PMD_PATH=$PMD_HOME/bin/pmd
+ENV JAVA_OPTS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+
+WORKDIR /app
+COPY --from=builder /build/target/*-runner.jar /app/app-runner.jar
+
+ENTRYPOINT ["java", "-jar", "app-runner.jar"]

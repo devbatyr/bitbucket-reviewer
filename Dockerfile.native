@@ -1,0 +1,29 @@
+FROM ghcr.io/graalvm/native-image-community:21 AS builder
+
+WORKDIR /build
+COPY . .
+
+RUN chmod +x ./mvnw && ./mvnw clean package -Pnative -DskipTests
+
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y curl unzip && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV PMD_VERSION=7.7.0
+ENV PMD_HOME=/opt/pmd
+
+RUN mkdir -p "$PMD_HOME" && \
+    curl -L "https://github.com/pmd/pmd/releases/download/pmd_releases/${PMD_VERSION}/pmd-dist-${PMD_VERSION}-bin.zip" -o /tmp/pmd.zip && \
+    unzip /tmp/pmd.zip -d /opt && \
+    mv /opt/pmd-bin-${PMD_VERSION}/* "$PMD_HOME" && \
+    rm -rf /tmp/pmd.zip
+
+ENV PATH="$PMD_HOME/bin:$PATH"
+
+COPY --from=builder /build/target/*-runner /app/bitbucket-bot
+
+ENTRYPOINT ["./bitbucket-bot"]

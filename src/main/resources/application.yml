@@ -1,0 +1,13 @@
+quarkus:
+  rest-client:
+    bitbucket-api:
+      url: ${BITBUCKET_URL}
+
+bitbucket:
+  auth:
+    token: ${BITBUCKET_TOKEN}
+
+pmd:
+  path: ${PMD_PATH}
+  ruleset: ${PMD_RULESET}
+  suppressions: ${PMD_SUPPRESSIONS}
