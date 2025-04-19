@@ -4,6 +4,7 @@ import com.shakenov.bitbucket.reviewer.client.BitbucketApiClient;
 import com.shakenov.bitbucket.reviewer.config.PmdConfigProperties;
 import com.shakenov.bitbucket.reviewer.model.BitbucketPRContext;
 import com.shakenov.pmdcore.config.PmdConfig;
+import com.shakenov.pmdcore.model.PmdResponse;
 import com.shakenov.pmdcore.service.PmdService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -29,6 +30,7 @@ public class BitbucketService {
 
     @Inject CommitService commitService;
     @Inject DiffParserService diffParser;
+    @Inject AiRecommendationService aiRecommendationService;
     @Inject BitbucketCommentPublisher commentPublisher;
 
     @Inject
@@ -45,6 +47,7 @@ public class BitbucketService {
      *     <li>Parses the list of modified files from the diff</li>
      *     <li>Fetches the content of each modified file</li>
      *     <li>Runs PMD analysis on each file</li>
+     *     <li>Requests AI recommendations based on violations (if any)</li>
      *     <li>Posts formatted results as comments on the pull request</li>
      * </ul>
      *
@@ -70,9 +73,32 @@ public class BitbucketService {
                 .map(path -> fetchFileContentSafe(workspace, repo, path, commitSha))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .map(file -> createPmdConfig(file.path(), file.code()))
-                .map(pmdService::runPmd)
-                .forEach(response -> commentPublisher.publish(context, response.getFormattedOutput()));
+                .map(file -> new AnalyzedResult(file, pmdService.runPmd(createPmdConfig(file.path(), file.code()))))
+                .forEach(result -> publishAnalysisResult(result, context));
+    }
+
+    /**
+     * Publishes the analysis result of a single file to the pull request.
+     * <p>
+     * This method appends PMD results and, if violations are present,
+     * adds AI-based suggestions for improvement. It then publishes the
+     * entire message as a comment to the pull request.
+     *
+     * @param result  the result of PMD analysis and file metadata
+     * @param context the pull request context used to publish the comment
+     */
+    private void publishAnalysisResult(AnalyzedResult result, BitbucketPRContext context) {
+        var response = result.response();
+        var file = result.file();
+
+        StringBuilder enhancedOutput = new StringBuilder(response.getFormattedOutput());
+
+        if (!response.getViolations().isEmpty()) {
+            String aiSuggestions = aiRecommendationService.getRecommendation(response.getViolations(), file.code());
+            enhancedOutput.append("\n\n🧠 AI Recommendations:\n").append(aiSuggestions);
+        }
+
+        commentPublisher.publish(context, enhancedOutput.toString());
     }
 
     /**
@@ -121,4 +147,14 @@ public class BitbucketService {
      */
     private record AnalyzedFile(String path, String code) {}
 
+    /**
+     * Container for storing the result of PMD analysis on a file.
+     * <p>
+     * This record combines the analyzed file and the corresponding
+     * PMD response containing violations and formatted output.
+     *
+     * @param file     the file that was analyzed
+     * @param response the PMD analysis response for the file
+     */
+    private record AnalyzedResult(AnalyzedFile file, PmdResponse response) {}
 }

@@ -2,10 +2,19 @@ quarkus:
   rest-client:
     bitbucket-api:
       url: ${BITBUCKET_URL}
+    ollama-api:
+      url: ${OLLAMA_API_URL}
+      connect-timeout: ${OLLAMA_CONNECT_TIMEOUT}
+      read-timeout: ${OLLAMA_READ_TIMEOUT}
 
 bitbucket:
   auth:
     token: ${BITBUCKET_TOKEN}
+
+ollama:
+  prompt-path: ${OLLAMA_PROMPT_PATH}
+  model: ${OLLAMA_MODEL}
+  temperature: ${OLLAMA_TEMPERATURE}
 
 pmd:
   path: ${PMD_PATH}

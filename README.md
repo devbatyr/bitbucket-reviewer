@@ -1,17 +1,16 @@
 Bitbucket Reviewer 🤖
 ======================
 
-**Bitbucket Reviewer** is an automated code analysis tool for Bitbucket Server. It leverages PMD to analyze Java code in pull requests and posts comments directly on the PR with relevant feedback.
+**Bitbucket Reviewer** is an automated code analysis tool for Bitbucket Server. It leverages PMD to analyze Java code in pull requests and provides AI-powered recommendations with contextual suggestions for improvements — all posted directly as comments on the pull request.
 
 This tool was designed as a lightweight, centralized solution to avoid integrating PMD and linters into dozens (or hundreds) of existing projects. Instead of modifying each repository's build or CI pipeline, Bitbucket Reviewer offers a single point of analysis with consistent results.
-
-The current version provides a minimal integration — it runs PMD, formats the output, and posts results. However, the architecture allows further customization: filtering specific rules, modifying the output, or injecting custom analysis logic.
 
 🚀 Features
 -----------
 - Supports Bitbucket Server (REST API v1.0)
 - Integrates with PMD 7.x
-- Posts violations as comments in the PR
+- AI-powered recommendations using **Ollama** (e.g., DeepSeek models)
+- Posts formatted violations and suggestions as **PR comments**
 - REST endpoint to receive webhooks
 - Supports both:
     - Local development via `.env`
@@ -30,6 +29,14 @@ cp .env.example .env
 # Bitbucket Auth
 BITBUCKET_TOKEN=base64encodedtoken
 BITBUCKET_URL=https://bitbucket.example.com
+
+# Ollama API
+OLLAMA_API_URL=http://ollama.host:11434
+OLLAMA_MODEL=deepseek-coder:6.7b
+OLLAMA_TEMPERATURE=0.2
+OLLAMA_PROMPT_PATH=/absolute/path/to/prompt-template.txt
+OLLAMA_CONNECT_TIMEOUT=5000
+OLLAMA_READ_TIMEOUT=60000
 
 # PMD Configuration
 PMD_PATH=/absolute/path/to/pmd
@@ -80,21 +87,6 @@ Payload example:
   "repoSlug": "your-repo",
   "prId": 42
 }
-```
-
-📁 Project Structure
---------------------
-
-```
-.
-├── src
-│   ├── main
-│   │   ├── java/com/shakenov/bitbucket/reviewer
-│   │   └── resources
-├── .env.example
-├── Dockerfile.jvm
-├── Dockerfile.native
-└── README.md
 ```
 
 🛡️ Tech Stack

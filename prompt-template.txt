@@ -1,0 +1,7 @@
+For each violation below, provide a one-sentence fix recommendation.
+
+Violations:
+{{violations}}
+
+Code:
+{{code}}
